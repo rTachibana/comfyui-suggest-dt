@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# danbooru tag data (downloaded at runtime)
+data/*
+!data/.gitkeep

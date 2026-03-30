@@ -1,0 +1,101 @@
+/* ── Dropdown ─────────────────────────────────────────────────────────────── */
+
+.suggest-dt-dropdown {
+    position: fixed;
+    z-index: 99999;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    max-height: 260px;
+    overflow-y: auto;
+    min-width: 180px;
+    max-width: 400px;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.suggest-dt-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.suggest-dt-item:hover,
+.suggest-dt-item.active {
+    background: #2a4a7a;
+}
+
+/* ── Tag name (category colours follow Danbooru's scheme) ─────────────────── */
+
+.suggest-dt-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ccc; /* default / general */
+}
+
+.suggest-dt-cat-1 .suggest-dt-name { color: #f2ac08; } /* artist   */
+.suggest-dt-cat-3 .suggest-dt-name { color: #dd00dd; } /* copyright */
+.suggest-dt-cat-4 .suggest-dt-name { color: #3d9e3d; } /* character */
+.suggest-dt-cat-5 .suggest-dt-name { color: #999;    } /* meta      */
+
+.suggest-dt-item.active .suggest-dt-name { color: #fff; }
+
+/* ── Post count ───────────────────────────────────────────────────────────── */
+
+.suggest-dt-count {
+    color: #666;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.suggest-dt-item.active .suggest-dt-count { color: #9ab; }
+
+/* ── Wiki "?" button ──────────────────────────────────────────────────────── */
+
+.suggest-dt-wiki {
+    display: inline-block;
+    flex-shrink: 0;
+    font-size: 10px;
+    line-height: 1.4;
+    padding: 0 4px;
+    border: 1px solid #555;
+    border-radius: 2px;
+    color: #777;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.suggest-dt-wiki:hover {
+    color: #adf;
+    border-color: #88f;
+    background: #1a2040;
+}
+
+/* ── Wiki tooltip ─────────────────────────────────────────────────────────── */
+
+.suggest-dt-wiki-tooltip {
+    position: fixed;
+    z-index: 100001;
+    background: #161616;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 8px 11px;
+    max-width: 300px;
+    font-family: sans-serif;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #ccc;
+    pointer-events: none;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.suggest-dt-wiki-tooltip.loading { color: #888; font-style: italic; }
+.suggest-dt-wiki-tooltip.not-found { color: #666; font-style: italic; }
