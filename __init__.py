@@ -106,11 +106,54 @@ async def list_files(request):
         suffix = source.get("suffix", "")
         if not folder or not os.path.isdir(folder):
             continue
-        try:
-            for fname in sorted(os.listdir(folder)):
-                if fname.lower().endswith((".txt", ".yaml", ".yml")):
-                    name = os.path.splitext(fname)[0]
-                    result.append({"name": name, "prefix": prefix, "suffix": suffix})
-        except OSError:
-            pass
+        for name in _wildcard_names(folder):
+            result.append({"name": name, "prefix": prefix, "suffix": suffix})
     return web.json_response(result)
+
+
+def _structured_names(data, prefix):
+    """Key paths of the lists in a YAML/JSON wildcard file (sd-dynamic-prompts naming)."""
+    if isinstance(data, list):
+        return [prefix] if prefix and data else []
+    names = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            names += _structured_names(value, f"{prefix}/{key}" if prefix else str(key))
+    return names
+
+
+def _wildcard_names(folder):
+    """
+    Wildcard names under *folder*, including subfolders (``dir/name``).
+    A ``.txt`` file is named by its path; a YAML/JSON file holding a mapping
+    gives one name per list inside, by folder plus key path (the file name is
+    not part of it): ``clothing.yaml`` → ``clothing: {tops: […]}`` → ``clothing/tops``.
+    """
+    names = set()
+    for root, dirs, files in os.walk(folder):
+        dirs.sort()
+        rel_dir = os.path.relpath(root, folder).replace("\\", "/")
+        rel_dir = "" if rel_dir == "." else rel_dir
+        for fname in files:
+            stem, ext = os.path.splitext(fname)
+            ext = ext.lower()
+            if ext not in (".txt", ".yaml", ".yml", ".json"):
+                continue
+            rel = f"{rel_dir}/{stem}" if rel_dir else stem
+            if ext == ".txt":
+                names.add(rel)
+                continue
+            try:
+                with open(os.path.join(root, fname), encoding="utf-8") as f:
+                    if ext == ".json":
+                        data = json.load(f)
+                    else:
+                        import yaml
+                        data = yaml.safe_load(f)
+            except Exception:
+                continue  # unreadable or malformed: leave it out
+            if isinstance(data, list):
+                names.add(rel)
+            else:
+                names.update(_structured_names(data, rel_dir))
+    return sorted(names, key=str.lower)
