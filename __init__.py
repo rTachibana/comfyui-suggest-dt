@@ -68,7 +68,9 @@ async def get_wiki(request):
     url = f"https://danbooru.donmai.us/wiki_pages/{urllib.parse.quote(tag)}.json"
     try:
         timeout = aiohttp.ClientTimeout(total=6)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        # Danbooru answers 403 to aiohttp's default User-Agent, so name ourselves.
+        headers = {"User-Agent": "comfyui-suggest-dt/1.0 (+https://github.com/rTachibana/comfyui-suggest-dt)"}
+        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
             async with session.get(url) as resp:
                 if resp.status == 404:
                     return web.Response(status=404)
