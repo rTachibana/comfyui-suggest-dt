@@ -360,19 +360,39 @@ class Dropdown {
 
 const dropdown = new Dropdown();
 
-function getCurrentWord(textarea) {
+// Besides commas and newlines, also suggest right after emphasis ( ) [ ] and random { | }.
+const WORD_STOP = /[,\n(){}\[\]|]/;
+
+// Find the word to complete at the caret. If the whole segment since the last
+// delimiter has no match, retry from later spaces (e.g. "1girl long_h", or a
+// tag written inside a sentence). Returns { matches, start, end, sep } or null.
+function matchCurrentWord(textarea) {
     const val = textarea.value;
     const pos = textarea.selectionStart;
-    let start = pos;
-    while (start > 0 && !/[,\n]/.test(val[start - 1])) start--;
-    while (start < pos && val[start] === " ") start++;
-    return { word: val.slice(start, pos), start, end: pos };
+    let seg = pos;
+    while (seg > 0 && !WORD_STOP.test(val[seg - 1])) seg--;
+    while (seg < pos && val[seg] === " ") seg++;
+    let before = seg;
+    while (before > 0 && val[before - 1] === " ") before--;
+    const afterComma = before === 0 || /[,\n]/.test(val[before - 1]);
+    let end = pos;
+    while (end < val.length && /[A-Za-z0-9_]/.test(val[end])) end++;   // replace the rest of a half-typed word too
+    const starts = [seg];
+    for (let i = seg + 1; i < pos; i++) if (val[i - 1] === " " && val[i] !== " ") starts.push(i);
+    for (const start of [starts[0], ...starts.slice(1).slice(-5)]) {
+        const word = val.slice(start, pos);
+        if (word.length < 2) continue;
+        const matches = getFileMatches(word) ?? getTagMatches(word);
+        if (!matches.length) continue;
+        const comma = start === seg && afterComma && !val.slice(end).trimStart().startsWith(",");
+        return { matches, start, end, sep: comma ? ", " : "" };
+    }
+    return null;
 }
 
-function insertText(textarea, text, wordStart, wordEnd) {
+function insertText(textarea, text, { start: wordStart, end: wordEnd, sep }) {
     const val = textarea.value;
     const after = val.slice(wordEnd);
-    const sep = after.trimStart().startsWith(",") ? "" : ", ";
     textarea.value = val.slice(0, wordStart) + text + sep + after;
     const pos = wordStart + text.length + sep.length;
     textarea.setSelectionRange(pos, pos);
@@ -385,16 +405,12 @@ function attachAutocomplete(textarea) {
     textarea._suggestDtAttached = true;
 
     textarea.addEventListener("input", () => {
-        const { word, start, end } = getCurrentWord(textarea);
-        if (word.length < 2) { dropdown.hide(); return; }
-
-        const matches = getFileMatches(word) ?? getTagMatches(word);
-        if (!matches.length) { dropdown.hide(); return; }
+        const m = matchCurrentWord(textarea);
+        if (!m) { dropdown.hide(); return; }
 
         const rect = getCaretRect(textarea);
-        dropdown.show(matches, rect, (text) => {
-            const { start: s, end: e } = getCurrentWord(textarea);
-            insertText(textarea, text, s, e);
+        dropdown.show(m.matches, rect, (text) => {
+            insertText(textarea, text, matchCurrentWord(textarea) ?? m);
             dropdown.hide();
             textarea.focus();
         });
@@ -406,10 +422,10 @@ function attachAutocomplete(textarea) {
         else if (e.key === "ArrowUp")   { e.preventDefault(); dropdown.moveActive(-1); }
         else if (e.key === "Tab" || e.key === "Enter") {
             const text = dropdown.getActiveText();
-            if (text) {
+            const m = text && matchCurrentWord(textarea);
+            if (m) {
                 e.preventDefault();
-                const { start, end } = getCurrentWord(textarea);
-                insertText(textarea, text, start, end);
+                insertText(textarea, text, m);
                 dropdown.hide();
             }
         } else if (e.key === "Escape") {
